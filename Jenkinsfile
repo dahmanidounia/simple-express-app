@@ -3,7 +3,7 @@ pipeline {
 
     environment {
         AWS_REGION = "eu-west-3"
-        ECR_REPO  = "VOTRE_ID_ECR.dkr.ecr.eu-west-3.amazonaws.com/simple-express-app"
+        ECR_REPO  = "784748657947.dkr.ecr.eu-west-3.amazonaws.com/simple-express-app"
         APP_NAME  = "simple-express-app"
     }
 
