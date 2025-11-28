@@ -22,7 +22,7 @@ pipeline {
         stage('Checkout') {
             steps {
                 git branch: 'master',
-                    url: 'https://github.com/frankhokevinho/simple-express-app'
+                    url: 'https://github.com/dahmanidounia/simple-express-app.git'
             }
         }
 
@@ -86,14 +86,22 @@ pipeline {
                                 export AWS_SECRET_ACCESS_KEY='${AWS_SECRET_ACCESS_KEY}'
                                 export AWS_SESSION_TOKEN='${AWS_SESSION_TOKEN}'
 
-                                docker rm -f \$(docker ps -aq) || true
+                                # Stop and remove ALL running containers
+                                docker stop \$(docker ps -q) || true
+                                docker rm \$(docker ps -aq) || true
+
+                                # Clean system
                                 docker system prune -af || true
 
+                                # ECR login
                                 aws ecr get-login-password --region ${AWS_REGION} \
                                     | docker login --username AWS --password-stdin ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com
 
+                                # Pull latest image
                                 docker pull ${ECR_IMAGE_URI}
-                                docker run -d -p 3000:3000 ${ECR_IMAGE_URI}
+
+                                # Run new container on port 3000
+                                docker run -d --name app -p 3000:3000 ${ECR_IMAGE_URI}
                             "
                         '''
                     }
