@@ -57,3 +57,42 @@ pipeline {
                     string(credentialsId: 'aws-session-token', variable: 'AWS_SESSION_TOKEN')
                 ]) {
                     sh '''
+                        aws sts get-caller-identity --region us-east-1
+                        aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com
+                        docker push ${ECR_IMAGE_URI}
+                    '''
+                }
+            }
+        }
+
+        stage('Deploy on EC2') {
+            steps {
+                sshagent(credentials: ['ec2-ssh-key']) {
+                    withCredentials([
+                        string(credentialsId: 'aws-access-key-id', variable: 'AWS_ACCESS_KEY_ID'),
+                        string(credentialsId: 'aws-secret-access-key', variable: 'AWS_SECRET_ACCESS_KEY'),
+                        string(credentialsId: 'aws-session-token', variable: 'AWS_SESSION_TOKEN')
+                    ]) {
+                        sh """
+                            ssh -o StrictHostKeyChecking=no ec2-user@${EC2_HOST} '
+                                export AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+                                export AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+                                export AWS_SESSION_TOKEN=${AWS_SESSION_TOKEN}
+
+                                docker stop app || true
+                                docker rm app || true
+                                docker system prune -af || true
+
+                                aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com
+
+                                docker pull ${ECR_IMAGE_URI}
+
+                                docker run -d --name app -p 3000:3000 ${ECR_IMAGE_URI}
+                            '
+                        """
+                    }
+                }
+            }
+        }
+    }
+}
