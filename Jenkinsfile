@@ -1,6 +1,6 @@
 properties([
     pipelineTriggers([
-        githubPush()   // Active le webhook GitHub
+        githubPush()   // Active le déclenchement automatique via Webhook GitHub
     ])
 ])
 
@@ -29,7 +29,7 @@ pipeline {
                     string(credentialsId: 'aws-secret-access-key', variable: 'AWS_SECRET_ACCESS_KEY'),
                     string(credentialsId: 'aws-session-token', variable: 'AWS_SESSION_TOKEN')
                 ]) {
-                    sh 'echo AWS credentials loaded'
+                    sh 'echo "AWS credentials loaded"'
                 }
             }
         }
@@ -58,7 +58,9 @@ pipeline {
                 ]) {
                     sh '''
                         aws sts get-caller-identity --region us-east-1
-                        aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com
+                        aws ecr get-login-password --region us-east-1 \
+                            | docker login --username AWS --password-stdin ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com
+
                         docker push ${ECR_IMAGE_URI}
                     '''
                 }
@@ -73,6 +75,7 @@ pipeline {
                         string(credentialsId: 'aws-secret-access-key', variable: 'AWS_SECRET_ACCESS_KEY'),
                         string(credentialsId: 'aws-session-token', variable: 'AWS_SESSION_TOKEN')
                     ]) {
+
                         sh """
                             ssh -o StrictHostKeyChecking=no ec2-user@${EC2_HOST} '
                                 export AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
@@ -83,7 +86,8 @@ pipeline {
                                 docker rm app || true
                                 docker system prune -af || true
 
-                                aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com
+                                aws ecr get-login-password --region us-east-1 \
+                                    | docker login --username AWS --password-stdin ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com
 
                                 docker pull ${ECR_IMAGE_URI}
 
@@ -96,3 +100,4 @@ pipeline {
         }
     }
 }
+
